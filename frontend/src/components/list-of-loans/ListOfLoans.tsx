@@ -1,24 +1,27 @@
-import React, { useState, useEffect, MouseEvent, ChangeEvent } from "react";
+import React, { useState, useEffect, useCallback, MouseEvent, ChangeEvent } from "react";
 import { LoanDTO } from "../../api/dto/loan.dto";
 import SearchIcon from "@mui/icons-material/Search";
-import TablePagination from "@mui/material/TablePagination";
+import PersonIcon from "@mui/icons-material/Person";
 import {
     Box,
+    Button,
+    Chip,
+    Paper,
     Table,
     TableBody,
     TableCell,
     TableContainer,
     TableHead,
+    TablePagination,
     TableRow,
-    Paper,
+    TextField,
     Typography,
-    TextField
 } from "@mui/material";
 import MenuAppBar from "../menu-app-bar/MenuAppBar";
 import { useApi } from "../../api/ApiProvider";
+import { useTranslation } from "react-i18next";
+import { isAdmin } from "../../auth";
 import "./ListOfLoans.css";
-import {useTranslation} from "react-i18next";
-import PersonIcon from "@mui/icons-material/Person";
 
 function ListOfLoans() {
     const [page, setPage] = useState(0);
@@ -27,9 +30,10 @@ function ListOfLoans() {
     const [searchTerm, setSearchTerm] = useState('');
     const apiClient = useApi();
     const { t } = useTranslation();
+    const admin = isAdmin();
 
-    useEffect(() => {
-        apiClient.getAllLoans().then(response => {
+    const loadLoans = useCallback(() => {
+        apiClient.getLoans().then(response => {
             if (response.success && response.data) {
                 setLoans(response.data);
             } else {
@@ -37,6 +41,12 @@ function ListOfLoans() {
             }
         });
     }, [apiClient]);
+
+    useEffect(loadLoans, [loadLoans]);
+
+    const handleReturn = (loan: LoanDTO) => {
+        apiClient.returnLoan(loan.id).then(loadLoans);
+    };
 
     const handlePageChange = (event: MouseEvent<HTMLButtonElement> | null, newPage: number) => {
         setPage(newPage);
@@ -47,14 +57,18 @@ function ListOfLoans() {
         setPage(0);
     };
 
-    const handleSearch = (event: ChangeEvent<HTMLInputElement>) => {
-        setSearchTerm(event.target.value);
-    };
-
+    const term = searchTerm.toLowerCase();
     const filteredLoans = loans.filter(loan =>
-        loan.user?.toString().includes(searchTerm) ||
-        loan.book?.toString().includes(searchTerm)
+        loan.username.toLowerCase().includes(term) || loan.bookTitle.toLowerCase().includes(term)
     );
+
+    const status = (loan: LoanDTO) => {
+        if (loan.returnedOn) {
+            return <Chip size="small" label={`${t("Returned")} ${loan.returnedOn}`} />;
+        }
+        return <Chip size="small" color={loan.overdue ? "error" : "primary"}
+                     label={loan.overdue ? t("Overdue") : t("Active")} />;
+    };
 
     return (
         <Box>
@@ -68,9 +82,9 @@ function ListOfLoans() {
                     <TextField
                         variant="outlined"
                         fullWidth
-                        placeholder={t("Search loans by user ID or book ID")}
+                        placeholder={t("Search loans by user or book")}
                         value={searchTerm}
-                        onChange={handleSearch}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                     />
                 </Box>
                 <TableContainer component={Paper}>
@@ -84,24 +98,30 @@ function ListOfLoans() {
                                     </Box>
                                 </TableCell>
                                 <TableCell>{t("Book")}</TableCell>
-                                <TableCell>{t("Date of Start")}</TableCell>
-                                <TableCell>{t("Date of End")}</TableCell>
-                                <TableCell>{t("Date of Return")}</TableCell>
+                                <TableCell>{t("Borrowed on")}</TableCell>
+                                <TableCell>{t("Due on")}</TableCell>
+                                <TableCell>{t("Status")}</TableCell>
+                                {admin && <TableCell />}
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {(rowsPerPage > 0
-                                    ? filteredLoans.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                                    : filteredLoans
-                            ).map((loan) => (
-                                <TableRow key={loan.loanId}>
-                                    <TableCell>{loan.loanId}</TableCell>
-                                    <TableCell>{loan.user?.userId}</TableCell>
-                                    <TableCell>{loan.book?.bookId}</TableCell>
-                                    <TableCell>{loan.dateOfStart?.toString()}</TableCell>
-                                    <TableCell>{loan.dateOfEnd?.toString()}</TableCell>
-                                    <TableCell>{loan.dateOfReturn?.toString()}</TableCell>
-
+                            {filteredLoans.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((loan) => (
+                                <TableRow key={loan.id}>
+                                    <TableCell>{loan.id}</TableCell>
+                                    <TableCell>{loan.username}</TableCell>
+                                    <TableCell>{loan.bookTitle}</TableCell>
+                                    <TableCell>{loan.borrowedOn}</TableCell>
+                                    <TableCell>{loan.dueOn}</TableCell>
+                                    <TableCell>{status(loan)}</TableCell>
+                                    {admin && (
+                                        <TableCell>
+                                            {!loan.returnedOn && (
+                                                <Button size="small" variant="outlined" onClick={() => handleReturn(loan)}>
+                                                    {t("Mark returned")}
+                                                </Button>
+                                            )}
+                                        </TableCell>
+                                    )}
                                 </TableRow>
                             ))}
                         </TableBody>

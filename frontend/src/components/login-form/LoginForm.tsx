@@ -6,6 +6,7 @@ import {Formik} from 'formik';
 import * as yup from 'yup';
 import {useNavigate} from "react-router-dom";
 import {useApi} from "../../api/ApiProvider";
+import {saveToken} from "../../auth";
 
 
 function LoginForm() {
@@ -16,7 +17,7 @@ function LoginForm() {
         (values: { username: string; password: string }, formik: any) => {
             apiClient.login(values).then((response) => {
                 if (response.success && response.data && response.data.token) {
-                    localStorage.setItem('token', response.data.token);
+                    saveToken(response.data.token);
                     navigate('/home');
                 } else {
                     formik.setFieldError('username', 'Invalid username or password');

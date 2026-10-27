@@ -2,6 +2,7 @@ import {Box, Button} from "@mui/material";
 import MenuAppBar from "../menu-app-bar/MenuAppBar";
 import {Link, Outlet} from "react-router-dom";
 import {useTranslation} from "react-i18next";
+import {isAdmin} from "../../auth";
 
 
 function HomePage() {
@@ -23,9 +24,11 @@ function HomePage() {
                 <Button variant="contained" component={Link} to="/loans" sx={{ m: 1, bgcolor: 'grey' }}>
                     {t('Loans')}
                 </Button>
-                <Button variant="contained" component={Link} to="/admin" sx={{ m: 1, bgcolor: 'grey' }}>
+                {isAdmin() && (
+                    <Button variant="contained" component={Link} to="/admin" sx={{ m: 1, bgcolor: 'grey' }}>
                         {t('Admin Panel')}
-                </Button>
+                    </Button>
+                )}
             </Box>
             <Outlet />
         </Box>

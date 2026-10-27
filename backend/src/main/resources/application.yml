@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: library-management-system
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:library}
+    username: ${MYSQL_USER:library}
+    password: ${MYSQL_PASSWORD:library}
+  jpa:
+    hibernate:
+      ddl-auto: validate  # the schema is owned by Liquibase
+    open-in-view: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+app:
+  jwt:
+    # Base64-encoded HMAC key, at least 256 bits. The default is for local development only.
+    secret: ${JWT_SECRET:ZGV2LW9ubHktc2VjcmV0LWRvLW5vdC11c2UtaW4tcHJvZHVjdGlvbi0xMjM0NTY=}
+    expiration: ${JWT_EXPIRATION:PT1H}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

@@ -1,28 +1,13 @@
-export class BookDTO {
-    bookId: number | undefined;
-    isbn: string | undefined;
-    title: string | undefined;
-    author: string | undefined;
-    publisher: string | undefined;
-    yearOfPublish: number | undefined;
-    availableCopies: number | undefined;
+export interface BookDTO {
+    id: number;
+    isbn: string;
+    title: string;
+    author: string;
+    publisher: string;
+    publicationYear: number;
+    availableCopies: number;
+    genre?: string;
+    summary?: string;
 }
 
-export class CreateBookDTO {
-    isbn: string | undefined;
-    title: string | undefined;
-    author: string | undefined;
-    publisher: string | undefined;
-    yearOfPublish: number | undefined;
-    availableCopies: number | undefined;
-}
-
-export class Book {
-    bookId: number | undefined;
-    isbn: string | undefined;
-    title: string | undefined;
-    author: string | undefined;
-    publisher: string | undefined;
-    yearOfPublish: number | undefined;
-    availableCopies: number | undefined;
-}
+export type BookRequest = Omit<BookDTO, 'id'>;

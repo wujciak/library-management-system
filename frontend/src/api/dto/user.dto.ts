@@ -1,19 +1,17 @@
-export class UserDTO {
-    userId: number | undefined;
-    name: string | undefined;
-    age: number | undefined;
-    email: string | undefined;
+export type Role = 'ADMIN' | 'READER';
+
+export interface UserDTO {
+    id: number;
+    username: string;
+    role: Role;
+    name: string;
+    email: string;
 }
 
-export class CreateUserDTO {
-    name: string | undefined;
-    age: number | undefined;
-    email: string | undefined;
-}
-
-export class User {
-    userId: number | undefined;
-    name: string | undefined;
-    age: number | undefined;
-    email: string | undefined;
+export interface CreateUserDTO {
+    username: string;
+    password: string;
+    role: Role;
+    name: string;
+    email: string;
 }

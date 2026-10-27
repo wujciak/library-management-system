@@ -1,26 +1,28 @@
-import React, { useCallback } from 'react';
-import { Button, TextField, Box } from '@mui/material';
+import React, { useCallback, useState } from 'react';
+import { Alert, Button, TextField, Box } from '@mui/material';
 import { Formik } from 'formik';
 import * as yup from 'yup';
 import { useApi } from '../../api/ApiProvider';
-import { CreateBookDTO } from '../../api/dto/book.dto';
+import { BookRequest } from '../../api/dto/book.dto';
 import {useTranslation} from "react-i18next";
 
 function AddBookForm() {
     const apiClient = useApi();
     const { t } = useTranslation();
+    const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
     const onSubmit = useCallback(
-        (values: CreateBookDTO, formik: any) => {
+        (values: BookRequest, formik: any) => {
             apiClient.createBook(values).then((response) => {
                 if (response.success) {
                     formik.resetForm();
+                    setMessage({ ok: true, text: `${t('Added')}: ${values.title}` });
                 } else {
-                    console.error('Failed to create book');
+                    setMessage({ ok: false, text: response.error ?? t('Could not add the book') });
                 }
             });
         },
-        [apiClient]
+        [apiClient, t]
     );
 
     const validationSchema = yup.object().shape({
@@ -28,8 +30,8 @@ function AddBookForm() {
         author: yup.string().required('Author is required'),
         isbn: yup.string().required('ISBN is required'),
         publisher: yup.string().required('Publisher is required'),
-        yearOfPublish: yup.number().required('Year of publish is required').positive().integer(),
-        availableCopies: yup.number().required('Available copies is required').positive().integer()
+        publicationYear: yup.number().required('Year of publish is required').integer().min(1450),
+        availableCopies: yup.number().required('Available copies is required').integer().min(0)
     });
 
     return (
@@ -39,8 +41,8 @@ function AddBookForm() {
                 author: '',
                 isbn: '',
                 publisher: '',
-                yearOfPublish: 2020,
-                availableCopies: 0
+                publicationYear: 2020,
+                availableCopies: 1
             }}
             onSubmit={onSubmit}
             validationSchema={validationSchema}
@@ -48,6 +50,7 @@ function AddBookForm() {
             {(formik) => (
                 <form onSubmit={formik.handleSubmit}>
                     <Box display="flex" flexDirection="column" gap={2}>
+                        {message && <Alert severity={message.ok ? 'success' : 'error'}>{message.text}</Alert>}
                         <TextField
                             id="title"
                             label={t("Title")}
@@ -93,16 +96,16 @@ function AddBookForm() {
                             helperText={formik.touched.publisher && formik.errors.publisher}
                         />
                         <TextField
-                            id="yearOfPublish"
+                            id="publicationYear"
                             label={t("Year of Publish")}
                             variant="outlined"
-                            name="yearOfPublish"
+                            name="publicationYear"
                             type="number"
                             onChange={formik.handleChange}
                             onBlur={formik.handleBlur}
-                            value={formik.values.yearOfPublish}
-                            error={formik.touched.yearOfPublish && !!formik.errors.yearOfPublish}
-                            helperText={formik.touched.yearOfPublish && formik.errors.yearOfPublish}
+                            value={formik.values.publicationYear}
+                            error={formik.touched.publicationYear && !!formik.errors.publicationYear}
+                            helperText={formik.touched.publicationYear && formik.errors.publicationYear}
                         />
                         <TextField
                             id="availableCopies"

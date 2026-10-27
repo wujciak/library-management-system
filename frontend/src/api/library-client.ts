@@ -1,13 +1,16 @@
-import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosError, AxiosInstance } from 'axios';
 import { LoginDTO, LoginResponseDTO } from './dto/login.dto';
-import { BookDTO, CreateBookDTO } from "./dto/book.dto";
-import {CreateLoanDTO, LoanDTO} from "./dto/loan.dto";
-import {CreateUserDTO, UserDTO} from "./dto/user.dto";
+import { BookDTO, BookRequest } from './dto/book.dto';
+import { LoanDTO, LoanRequest } from './dto/loan.dto';
+import { CreateUserDTO, UserDTO } from './dto/user.dto';
+import { getToken, logout } from '../auth';
 
 export type ClientResponse<T> = {
     success: boolean;
-    data: T;
+    data: T | null;
     statusCode: number;
+    /** `detail` of the API's problem response, if any. */
+    error?: string;
 };
 
 export class LibraryClient {
@@ -15,168 +18,72 @@ export class LibraryClient {
 
     constructor() {
         this.client = axios.create({
-            baseURL: 'http://localhost:8080',
+            baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8080',
         });
-
-        const token = localStorage.getItem('token');
-        if (token) {
-            this.client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        }
-    }
-
-    public async login(data: LoginDTO): Promise<ClientResponse<LoginResponseDTO | null>> {
-        try {
-            const response: AxiosResponse<LoginResponseDTO> = await this.client.post(
-                '/api/auth/login',
-                data,
-            );
-
-            this.client.defaults.headers.common['Authorization'] =
-                `Bearer ${response.data.token}`;
-
-            return {
-                success: true,
-                data: response.data,
-                statusCode: response.status,
-            };
-        } catch (error) {
-            const axiosError = error as AxiosError<Error>;
-
-            return {
-                success: false,
-                data: null,
-                statusCode: axiosError.response?.status || 0,
-            };
-        }
-    }
-
-    public async getAllBooks(): Promise<ClientResponse<BookDTO[] | null>> {
-        try {
-            const response: AxiosResponse<BookDTO[]> = await this.client.get('/api/book/getAll');
-
-            return {
-                success: true,
-                data: response.data,
-                statusCode: response.status,
-            };
-        } catch (error) {
-            const axiosError = error as AxiosError<Error>;
-
-            console.error('Error fetching books:', axiosError);
-
-            return {
-                success: false,
-                data: null,
-                statusCode: axiosError.response?.status || 0,
-            };
-        }
-    }
-
-    public async createBook(data: CreateBookDTO): Promise<ClientResponse<BookDTO | null>> {
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                console.error('Token not found');
-                return {
-                    success: false,
-                    data: null,
-                    statusCode: 0,
-                };
+        this.client.interceptors.request.use((config) => {
+            const token = getToken();
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
             }
-
-            const response: AxiosResponse<BookDTO> = await this.client.post('/api/book/create', data, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
-            return {
-                success: true,
-                data: response.data,
-                statusCode: response.status,
-            };
-        } catch (error) {
-            const axiosError = error as AxiosError<Error>;
-            return {
-                success: false,
-                data: null,
-                statusCode: axiosError.response?.status || 0,
-            };
-        }
+            return config;
+        });
+        this.client.interceptors.response.use(undefined, (error: AxiosError) => {
+            if (error.response?.status === 401 && getToken()) {
+                logout();  // expired or invalid token: back to the login page
+                window.location.assign('/login');
+            }
+            return Promise.reject(error);
+        });
     }
 
-    public async getAllLoans(): Promise<ClientResponse<LoanDTO[] | null>> {
+    private async call<T>(request: Promise<{ data: T; status: number }>): Promise<ClientResponse<T>> {
         try {
-            const response: AxiosResponse<LoanDTO[]> = await this.client.get('/api/loan/getAll');
-
-            return {
-                success: true,
-                data: response.data,
-                statusCode: response.status,
-            };
-        } catch (error) {
-            const axiosError = error as AxiosError<Error>;
-
+            const response = await request;
+            return { success: true, data: response.data, statusCode: response.status };
+        } catch (e) {
+            const error = e as AxiosError<{ detail?: string }>;
             return {
                 success: false,
                 data: null,
-                statusCode: axiosError.response?.status || 0,
+                statusCode: error.response?.status ?? 0,
+                error: error.response?.data?.detail,
             };
         }
     }
 
-    public async createLoan(data: CreateLoanDTO): Promise<ClientResponse<LoanDTO | null>> {
-        try {
-            const response: AxiosResponse<LoanDTO> = await this.client.post('/api/loan/create', data);
-            return {
-                success: true,
-                data: response.data,
-                statusCode: response.status,
-            };
-        } catch (error) {
-            const axiosError = error as AxiosError<Error>;
-            return {
-                success: false,
-                data: null,
-                statusCode: axiosError.response?.status || 0,
-            };
-        }
+    login(data: LoginDTO) {
+        return this.call(this.client.post<LoginResponseDTO>('/api/auth/login', data));
     }
 
-    public async getAllUsers(): Promise<ClientResponse<UserDTO[] | null>> {
-        try {
-            const response: AxiosResponse<UserDTO[]> = await this.client.get('/api/user/getAll');
-            return {
-                success: true,
-                data: response.data,
-                statusCode: response.status,
-            };
-        } catch (error) {
-            const axiosError = error as AxiosError<Error>;
-            return {
-                success: false,
-                data: null,
-                statusCode: axiosError.response?.status || 0,
-            };
-        }
+    me() {
+        return this.call(this.client.get<UserDTO>('/api/users/me'));
     }
 
-    public async createUser(data: CreateUserDTO): Promise<ClientResponse<UserDTO | null>> {
-        try {
-            const response: AxiosResponse<UserDTO> = await this.client.post('/api/user/create', data);
-            return {
-                success: true,
-                data: response.data,
-                statusCode: response.status,
-            };
-        } catch (error) {
-            const axiosError = error as AxiosError<Error>;
-            return {
-                success: false,
-                data: null,
-                statusCode: axiosError.response?.status || 0,
-            };
-        }
+    getBooks(title?: string) {
+        return this.call(this.client.get<BookDTO[]>('/api/books', { params: { title } }));
     }
 
+    createBook(data: BookRequest) {
+        return this.call(this.client.post<BookDTO>('/api/books', data));
+    }
+
+    getLoans() {
+        return this.call(this.client.get<LoanDTO[]>('/api/loans'));
+    }
+
+    borrow(data: LoanRequest) {
+        return this.call(this.client.post<LoanDTO>('/api/loans', data));
+    }
+
+    returnLoan(id: number) {
+        return this.call(this.client.post<LoanDTO>(`/api/loans/${id}/return`));
+    }
+
+    getUsers() {
+        return this.call(this.client.get<UserDTO[]>('/api/users'));
+    }
+
+    createUser(data: CreateUserDTO) {
+        return this.call(this.client.post<UserDTO>('/api/users', data));
+    }
 }

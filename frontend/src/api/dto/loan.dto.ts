@@ -1,19 +1,18 @@
-import {Book} from "./book.dto";
-import {User} from "./user.dto";
-
-export class LoanDTO {
-    loanId: number | undefined;
-    book: Book | undefined;
-    user: User | undefined;
-    dateOfStart: Date | undefined;
-    dateOfEnd: Date | undefined;
-    dateOfReturn: Date | undefined;
+export interface LoanDTO {
+    id: number;
+    bookId: number;
+    bookTitle: string;
+    userId: number;
+    username: string;
+    borrowedOn: string;
+    dueOn: string;
+    returnedOn: string | null;
+    overdue: boolean;
 }
 
-export class CreateLoanDTO {
-    book: Book | undefined;
-    user: User | undefined;
-    dateOfStart: Date | undefined;
-    dateOfEnd: Date | undefined;
-    dateOfReturn: Date | undefined;
+/** Readers borrow for themselves; admins may set userId. dueOn defaults to 30 days. */
+export interface LoanRequest {
+    bookId: number;
+    userId?: number;
+    dueOn?: string;
 }

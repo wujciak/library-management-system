@@ -1,133 +1,100 @@
-import React, { useCallback } from 'react';
-import { Button, TextField, Box } from '@mui/material';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, Button, MenuItem, TextField, Box } from '@mui/material';
 import { Formik } from 'formik';
 import * as yup from 'yup';
 import { useApi } from '../../api/ApiProvider';
-import { CreateLoanDTO } from '../../api/dto/loan.dto';
+import { BookDTO } from '../../api/dto/book.dto';
+import { UserDTO } from '../../api/dto/user.dto';
 import { useTranslation } from 'react-i18next';
-import { Book } from '../../api/dto/book.dto';
-import { User } from '../../api/dto/user.dto';
 
+type Values = { bookId: string; userId: string; dueOn: string };
+
+/** Lends a book to any user; the due date is optional (30 days by default). */
 function AddLoanForm() {
     const apiClient = useApi();
     const { t } = useTranslation();
+    const [books, setBooks] = useState<BookDTO[]>([]);
+    const [users, setUsers] = useState<UserDTO[]>([]);
+    const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+    const loadBooks = useCallback(() => {
+        apiClient.getBooks().then((r) => r.data && setBooks(r.data));
+    }, [apiClient]);
+
+    useEffect(() => {
+        loadBooks();
+        apiClient.getUsers().then((r) => r.data && setUsers(r.data));
+    }, [apiClient, loadBooks]);
 
     const onSubmit = useCallback(
-        async (values: any, formik: any) => {
-            try {
-                const book = { title: values.bookTitle } as Book;
-                const user = { name: values.username } as User;
-                const loan: CreateLoanDTO = {
-                    book,
-                    user,
-                    dateOfStart: values.dateOfStart,
-                    dateOfEnd: values.dateOfEnd,
-                    dateOfReturn: values.dateOfReturn || undefined,
-                };
-
-                const response = await apiClient.createLoan(loan);
-
-                if (response.success) {
-                    formik.resetForm();
-                } else {
-                    console.error('Failed to create loan:', response.statusCode);
-                }
-            } catch (error) {
-                console.error('Error creating loan:', error);
+        async (values: Values, formik: any) => {
+            const response = await apiClient.borrow({
+                bookId: Number(values.bookId),
+                userId: Number(values.userId),
+                dueOn: values.dueOn || undefined,
+            });
+            if (response.success && response.data) {
+                formik.resetForm();
+                setMessage({ ok: true, text: `${response.data.bookTitle} → ${response.data.username}` });
+                loadBooks();
+            } else {
+                setMessage({ ok: false, text: response.error ?? t('Could not create the loan') });
             }
         },
-        [apiClient]
+        [apiClient, loadBooks, t]
     );
 
     const validationSchema = yup.object().shape({
-        bookTitle: yup.string().required('Book title is required'),
-        username: yup.string().required('Username is required'),
-        dateOfStart: yup.date().required('Start date is required'),
-        dateOfEnd: yup.date().required('End date is required'),
-        dateOfReturn: yup.date().nullable(),
+        bookId: yup.string().required('Book is required'),
+        userId: yup.string().required('User is required'),
+        dueOn: yup.date().nullable(),
     });
 
     return (
-        <Formik
-            initialValues={{
-                bookTitle: '',
-                username: '',
-                dateOfStart: '',
-                dateOfEnd: '',
-                dateOfReturn: ''
-            }}
-            onSubmit={onSubmit}
-            validationSchema={validationSchema}
-        >
+        <Formik<Values> initialValues={{ bookId: '', userId: '', dueOn: '' }} onSubmit={onSubmit}
+                        validationSchema={validationSchema}>
             {(formik) => (
                 <form onSubmit={formik.handleSubmit}>
-                    <Box display="flex" flexDirection="column" gap={2}>
+                    <Box display="flex" flexDirection="column" gap={2} minWidth={260}>
+                        {message && <Alert severity={message.ok ? 'success' : 'error'}>{message.text}</Alert>}
                         <TextField
-                            id="bookTitle"
-                            label={t("Book Title")}
-                            variant="outlined"
-                            name="bookTitle"
+                            select
+                            id="bookId"
+                            name="bookId"
+                            label={t("Book")}
+                            value={formik.values.bookId}
                             onChange={formik.handleChange}
-                            onBlur={formik.handleBlur}
-                            value={formik.values.bookTitle}
-                            error={formik.touched.bookTitle && !!formik.errors.bookTitle}
-                            helperText={formik.touched.bookTitle && formik.errors.bookTitle}
-                        />
+                            error={formik.touched.bookId && !!formik.errors.bookId}
+                            helperText={formik.touched.bookId && formik.errors.bookId}
+                        >
+                            {books.map((b) => (
+                                <MenuItem key={b.id} value={String(b.id)} disabled={b.availableCopies === 0}>
+                                    {b.title} ({b.availableCopies})
+                                </MenuItem>
+                            ))}
+                        </TextField>
                         <TextField
-                            id="username"
-                            label={t("Username")}
-                            variant="outlined"
-                            name="username"
+                            select
+                            id="userId"
+                            name="userId"
+                            label={t("User")}
+                            value={formik.values.userId}
                             onChange={formik.handleChange}
-                            onBlur={formik.handleBlur}
-                            value={formik.values.username}
-                            error={formik.touched.username && !!formik.errors.username}
-                            helperText={formik.touched.username && formik.errors.username}
-                        />
+                            error={formik.touched.userId && !!formik.errors.userId}
+                            helperText={formik.touched.userId && formik.errors.userId}
+                        >
+                            {users.map((u) => (
+                                <MenuItem key={u.id} value={String(u.id)}>{u.username} ({u.name})</MenuItem>
+                            ))}
+                        </TextField>
                         <TextField
-                            id="dateOfStart"
-                            label={t("Date of Start")}
-                            variant="outlined"
-                            name="dateOfStart"
+                            id="dueOn"
+                            name="dueOn"
                             type="date"
+                            label={t("Due on")}
+                            value={formik.values.dueOn}
                             onChange={formik.handleChange}
-                            onBlur={formik.handleBlur}
-                            value={formik.values.dateOfStart}
-                            error={formik.touched.dateOfStart && !!formik.errors.dateOfStart}
-                            helperText={formik.touched.dateOfStart && formik.errors.dateOfStart}
-                            InputLabelProps={{
-                                shrink: true,
-                            }}
-                        />
-                        <TextField
-                            id="dateOfEnd"
-                            label={t("Date of End")}
-                            variant="outlined"
-                            name="dateOfEnd"
-                            type="date"
-                            onChange={formik.handleChange}
-                            onBlur={formik.handleBlur}
-                            value={formik.values.dateOfEnd}
-                            error={formik.touched.dateOfEnd && !!formik.errors.dateOfEnd}
-                            helperText={formik.touched.dateOfEnd && formik.errors.dateOfEnd}
-                            InputLabelProps={{
-                                shrink: true,
-                            }}
-                        />
-                        <TextField
-                            id="dateOfReturn"
-                            label={t("Date of Return")}
-                            variant="outlined"
-                            name="dateOfReturn"
-                            type="date"
-                            onChange={formik.handleChange}
-                            onBlur={formik.handleBlur}
-                            value={formik.values.dateOfReturn}
-                            error={formik.touched.dateOfReturn && !!formik.errors.dateOfReturn}
-                            helperText={formik.touched.dateOfReturn && formik.errors.dateOfReturn}
-                            InputLabelProps={{
-                                shrink: true,
-                            }}
+                            InputLabelProps={{ shrink: true }}
                         />
                         <Button type="submit" variant="contained" color="primary">
                             {t("Add Loan")}

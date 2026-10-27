@@ -1,4 +1,4 @@
-import React, { useState, useEffect, ChangeEvent, MouseEvent } from 'react';
+import React, { useState, useEffect, useCallback, ChangeEvent, MouseEvent } from 'react';
 import './ListOfBooks.css';
 import { BookDTO } from "../../api/dto/book.dto";
 import SearchIcon from '@mui/icons-material/Search';
@@ -14,7 +14,9 @@ import {
     Paper,
     Typography,
     TextField,
-    TablePagination
+    TablePagination,
+    Button,
+    Alert
 } from '@mui/material';
 import MenuAppBar from "../menu-app-bar/MenuAppBar";
 import { useApi } from "../../api/ApiProvider";
@@ -25,11 +27,12 @@ function ListOfBooks() {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [books, setBooks] = useState<BookDTO[]>([]);
+    const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
     const apiClient = useApi();
     const { t } = useTranslation();
 
-    useEffect(() => {
-        apiClient.getAllBooks().then(response => {
+    const loadBooks = useCallback(() => {
+        apiClient.getBooks().then(response => {
             if (response.success && response.data) {
                 setBooks(response.data);
             } else {
@@ -37,6 +40,17 @@ function ListOfBooks() {
             }
         });
     }, [apiClient]);
+
+    useEffect(loadBooks, [loadBooks]);
+
+    const handleBorrow = (book: BookDTO) => {
+        apiClient.borrow({ bookId: book.id }).then(response => {
+            setMessage(response.success && response.data
+                ? { ok: true, text: `${t('Borrowed')}: ${book.title}, ${t('due')} ${response.data.dueOn}` }
+                : { ok: false, text: response.error ?? t('Could not borrow the book') });
+            loadBooks();
+        });
+    };
 
     const handlePageChange = (event: MouseEvent<HTMLButtonElement> | null, newPage: number) => {
         setPage(newPage);
@@ -63,6 +77,11 @@ function ListOfBooks() {
                 <Typography variant="h4" gutterBottom>
                     {t('List Of Books')}
                 </Typography>
+                {message && (
+                    <Alert severity={message.ok ? 'success' : 'error'} onClose={() => setMessage(null)} sx={{ mb: 2 }}>
+                        {message.text}
+                    </Alert>
+                )}
                 <Box display="flex" alignItems="center" mb={2}>
                     <SearchIcon sx={{marginRight: 1}} />
                     <TextField
@@ -85,8 +104,9 @@ function ListOfBooks() {
                                 </TableCell>
                                 <TableCell>ISBN</TableCell>
                                 <TableCell>{t("Publisher")}</TableCell>
-                                <TableCell>{t("Date of Publish")}</TableCell>
+                                <TableCell>{t("Year of Publish")}</TableCell>
                                 <TableCell>{t("Available Copies")}</TableCell>
+                                <TableCell />
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -94,13 +114,19 @@ function ListOfBooks() {
                                     ? filteredBooks.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                                     : filteredBooks
                             ).map(book => (
-                                <TableRow key={book.bookId} className={book.availableCopies === 0 ? "unavailable" : ""}>
+                                <TableRow key={book.id} className={book.availableCopies === 0 ? "unavailable" : ""}>
                                     <TableCell>{book.title}</TableCell>
                                     <TableCell>{book.author}</TableCell>
                                     <TableCell>{book.isbn}</TableCell>
                                     <TableCell>{book.publisher}</TableCell>
-                                    <TableCell>{book.yearOfPublish}</TableCell>
+                                    <TableCell>{book.publicationYear}</TableCell>
                                     <TableCell>{book.availableCopies}</TableCell>
+                                    <TableCell>
+                                        <Button size="small" variant="outlined" disabled={book.availableCopies === 0}
+                                                onClick={() => handleBorrow(book)}>
+                                            {t("Borrow")}
+                                        </Button>
+                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>

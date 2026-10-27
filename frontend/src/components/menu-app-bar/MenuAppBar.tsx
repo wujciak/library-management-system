@@ -6,6 +6,7 @@ import {useNavigate} from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
 import TranslateIcon from '@mui/icons-material/Translate';
+import { currentUser, isAdmin, logout } from "../../auth";
 
 function MenuAppBar() {
     const [anchorElNav, setAnchorElNav] = useState<null | HTMLElement>(null);
@@ -41,6 +42,12 @@ function MenuAppBar() {
     const handleNavClick = (path: string) => {
         navigate(path);
         handleCloseNavMenu();
+    };
+
+    const handleLogout = () => {
+        logout();
+        handleCloseUserMenu();
+        navigate('/login');
     };
 
     const changeLanguage = (lng: string) => {
@@ -79,7 +86,7 @@ function MenuAppBar() {
                     >
                         <MenuItem onClick={() => handleNavClick('/books')}>{t('Books')}</MenuItem>
                         <MenuItem onClick={() => handleNavClick('/loans')}>{t('Loans')}</MenuItem>
-                        <MenuItem onClick={() => handleNavClick('/admin')}>{t('Admin Panel')}</MenuItem>
+                        {isAdmin() && <MenuItem onClick={() => handleNavClick('/admin')}>{t('Admin Panel')}</MenuItem>}
                     </Menu>
                 </Box>
                 <Typography variant="h6" color="inherit" component="div" sx={{ flexGrow: 1 }} onClick={() => handleNavClick('/home')}>
@@ -141,8 +148,8 @@ function MenuAppBar() {
                         open={Boolean(anchorElUser)}
                         onClose={handleCloseUserMenu}
                     >
-                        <MenuItem onClick={handleCloseUserMenu}>{t('Profile')}</MenuItem>
-                        <MenuItem onClick={() => handleNavClick('/login')}>{t('Log Out')}</MenuItem>
+                        <MenuItem disabled>{currentUser()?.sub}</MenuItem>
+                        <MenuItem onClick={handleLogout}>{t('Log Out')}</MenuItem>
                     </Menu>
                 </Box>
             </Toolbar>
