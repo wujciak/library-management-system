@@ -24,6 +24,11 @@ public class GlobalExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
     }
 
+    @ExceptionHandler(ServiceUnavailableException.class)
+    ProblemDetail unavailable(ServiceUnavailableException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
+    }
+
     @ExceptionHandler(ResponseStatusException.class)
     ProblemDetail status(ResponseStatusException e) {
         return ProblemDetail.forStatusAndDetail(e.getStatusCode(), e.getReason());

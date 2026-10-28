@@ -2,9 +2,12 @@ package com.jwojciak.library.loan;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 public interface LoanRepository extends JpaRepository<Loan, Long> {
 
@@ -23,4 +26,10 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
     boolean existsByBookId(long bookId);
 
     boolean existsByUserId(long userId);
+
+    @Query("select distinct l.book.id from Loan l where l.user.username = :username")
+    Set<Long> bookIdsBorrowedBy(String username);
+
+    @Query("select l.book.id from Loan l group by l.book.id order by count(l) desc")
+    List<Long> mostBorrowedBookIds(Pageable pageable);
 }
