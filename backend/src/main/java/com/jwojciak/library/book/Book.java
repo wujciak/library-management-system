@@ -39,6 +39,9 @@ public class Book {
     @Column(length = 2000)
     private String summary;
 
+    @Column(name = "cover_url")
+    private String coverUrl;
+
     protected Book() {
     }
 
@@ -123,5 +126,13 @@ public class Book {
 
     public void setSummary(String summary) {
         this.summary = summary;
+    }
+
+    public String getCoverUrl() {
+        return coverUrl;
+    }
+
+    public void setCoverUrl(String coverUrl) {
+        this.coverUrl = coverUrl;
     }
 }

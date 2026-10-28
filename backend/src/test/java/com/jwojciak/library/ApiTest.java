@@ -69,7 +69,7 @@ abstract class ApiTest {
 
     /** Id of a demo book, looked up by exact title. */
     protected long bookId(String token, String title) throws Exception {
-        for (JsonNode book : read(as(token, get("/api/books").param("title", title)))) {
+        for (JsonNode book : read(as(token, get("/api/books").param("q", title).param("size", "100"))).get("content")) {
             if (book.get("title").asText().equals(title)) {
                 return book.get("id").asLong();
             }

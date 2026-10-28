@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.Map;
 
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
 class BookApiTest extends ApiTest {
@@ -19,14 +20,36 @@ class BookApiTest extends ApiTest {
     }
 
     @Test
-    void readersCanListAndSearch() throws Exception {
+    void readersCanPageAndFilterTheCatalogue() throws Exception {
         String reader = reader();
-        mvc.perform(as(reader, get("/api/books")))
+        mvc.perform(as(reader, get("/api/books").param("size", "5")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(10));
-        mvc.perform(as(reader, get("/api/books").param("title", "clean")))
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].title").value("Clean Code"));
+                .andExpect(jsonPath("$.content.length()").value(5))
+                .andExpect(jsonPath("$.totalElements").value(Matchers.greaterThan(100)));
+        mvc.perform(as(reader, get("/api/books").param("q", "lem")))
+                .andExpect(jsonPath("$.content[?(@.title == 'Solaris')]").exists());
+        mvc.perform(as(reader, get("/api/books").param("genre", "Fantasy").param("size", "100")))
+                .andExpect(jsonPath("$.content[*].genre").value(Matchers.everyItem(
+                        Matchers.is("Fantasy"))));
+        mvc.perform(as(reader, get("/api/books").param("q", "The Road").param("available", "true")))
+                .andExpect(jsonPath("$.content[?(@.title == 'The Road')]").doesNotExist());
+        mvc.perform(as(reader, get("/api/books/genres")))
+                .andExpect(jsonPath("$").value(Matchers.hasItems("Fantasy", "Science fiction")));
+        mvc.perform(as(reader, get("/api/books").param("size", "1000"))).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void booksCarryTheirReviewStatistics() throws Exception {
+        String reader = reader();
+        long id = bookId(reader, "Solaris");
+        mvc.perform(as(reader, get("/api/books/" + id)))
+                .andExpect(jsonPath("$.reviewCount").value(0))
+                .andExpect(jsonPath("$.averageRating").isEmpty());
+        mvc.perform(as(reader, post("/api/books/" + id + "/reviews"), Map.of("score", 4)))
+                .andExpect(status().isCreated());
+        mvc.perform(as(reader, get("/api/books/" + id)))
+                .andExpect(jsonPath("$.reviewCount").value(1))
+                .andExpect(jsonPath("$.averageRating").value(4.0));
     }
 
     @Test

@@ -20,15 +20,19 @@ public final class BookDtos {
             @Min(1450) @Max(2100) int publicationYear,
             @Min(0) int availableCopies,
             @Size(max = 100) String genre,
-            @Size(max = 2000) String summary) {
+            @Size(max = 2000) String summary,
+            @Size(max = 255) @Pattern(regexp = "^https://.*", message = "must be an https URL") String coverUrl) {
     }
 
+    /** Average review score is null for a book without reviews. */
     public record BookResponse(Long id, String isbn, String title, String author, String publisher,
-                               int publicationYear, int availableCopies, String genre, String summary) {
+                               int publicationYear, int availableCopies, String genre, String summary,
+                               String coverUrl, Double averageRating, long reviewCount) {
 
-        static BookResponse of(Book b) {
+        public static BookResponse of(Book b, BookRepository.Rating rating) {
             return new BookResponse(b.getId(), b.getIsbn(), b.getTitle(), b.getAuthor(), b.getPublisher(),
-                    b.getPublicationYear(), b.getAvailableCopies(), b.getGenre(), b.getSummary());
+                    b.getPublicationYear(), b.getAvailableCopies(), b.getGenre(), b.getSummary(), b.getCoverUrl(),
+                    rating == null ? null : rating.getAverage(), rating == null ? 0 : rating.getCount());
         }
     }
 }

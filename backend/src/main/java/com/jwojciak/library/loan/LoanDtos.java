@@ -17,12 +17,13 @@ public final class LoanDtos {
     public record LoanRequest(@NotNull Long bookId, Long userId, @Future LocalDate dueOn) {
     }
 
-    public record LoanResponse(Long id, Long bookId, String bookTitle, Long userId, String username,
-                               LocalDate borrowedOn, LocalDate dueOn, LocalDate returnedOn, boolean overdue) {
+    public record LoanResponse(Long id, Long bookId, String bookTitle, String bookCoverUrl, Long userId,
+                               String username, LocalDate borrowedOn, LocalDate dueOn, LocalDate returnedOn,
+                               boolean overdue) {
 
         static LoanResponse of(Loan l, LocalDate today) {
-            return new LoanResponse(l.getId(), l.getBook().getId(), l.getBook().getTitle(), l.getUser().getId(),
-                    l.getUser().getUsername(), l.getBorrowedOn(), l.getDueOn(), l.getReturnedOn(),
+            return new LoanResponse(l.getId(), l.getBook().getId(), l.getBook().getTitle(), l.getBook().getCoverUrl(),
+                    l.getUser().getId(), l.getUser().getUsername(), l.getBorrowedOn(), l.getDueOn(), l.getReturnedOn(),
                     l.isActive() && l.getDueOn().isBefore(today));
         }
     }

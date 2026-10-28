@@ -3,3 +3,9 @@ databaseChangeLog:
       file: db/changelog/001-schema.sql
   - include:
       file: db/changelog/002-demo-data.sql
+  - include:
+      file: db/changelog/003-covers-and-embeddings.sql
+  - include:
+      file: db/changelog/004-catalogue.sql
+  - include:
+      file: db/changelog/005-demo-activity.sql

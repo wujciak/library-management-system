@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 
 class LoanApiTest extends ApiTest {
@@ -53,13 +54,15 @@ class LoanApiTest extends ApiTest {
 
         mvc.perform(as(reader, post("/api/loans"), Map.of("bookId", book, "userId", adminId)))
                 .andExpect(status().isForbidden());
+        int readerLoans = read(as(reader, get("/api/loans"))).size();
+        int allLoans = read(as(admin, get("/api/loans"))).size();
         long adminLoan = read(as(admin, post("/api/loans"), Map.of("bookId", book))).get("id").asLong();
         mvc.perform(as(reader, post("/api/loans"), Map.of("bookId", book))).andExpect(status().isCreated());
 
-        mvc.perform(as(reader, get("/api/loans")))
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].username").value("reader"));
-        mvc.perform(as(admin, get("/api/loans"))).andExpect(jsonPath("$.length()").value(2));
+        JsonNode own = read(as(reader, get("/api/loans")));
+        assertThat(own).hasSize(readerLoans + 1);
+        assertThat(own.findValuesAsText("username")).containsOnly("reader");
+        mvc.perform(as(admin, get("/api/loans"))).andExpect(jsonPath("$.length()").value(allLoans + 2));
         mvc.perform(as(reader, get("/api/loans/" + adminLoan))).andExpect(status().isForbidden());
         mvc.perform(as(reader, post("/api/loans/" + adminLoan + "/return"))).andExpect(status().isForbidden());
     }
