@@ -1,21 +1,15 @@
 import i18n from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import { initReactI18next } from 'react-i18next';
-import translationPL from './locales/pl.json';
-import translationEN from './locales/en.json';
-
-const resources = {
-    en: {
-        translation: translationEN,
-    },
-    pl: {
-        translation: translationPL,
-    },
-};
+import en from './locales/en.json';
+import pl from './locales/pl.json';
 
 i18n.use(LanguageDetector).use(initReactI18next).init({
+    resources: { en: { translation: en }, pl: { translation: pl } },
     fallbackLng: 'en',
-    resources,
+    supportedLngs: ['en', 'pl'],
+    nonExplicitSupportedLngs: true,
+    interpolation: { escapeValue: false },
 });
 
 export default i18n;

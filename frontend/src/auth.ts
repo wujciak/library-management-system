@@ -1,5 +1,6 @@
 import { jwtDecode } from 'jwt-decode';
-import { Role } from './api/dto/user.dto';
+
+export type Role = 'ADMIN' | 'READER';
 
 const KEY = 'token';
 
