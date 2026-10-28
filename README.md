@@ -15,7 +15,7 @@ API with JWT authentication and role-based access; a small Python service runs a
 sentence-embedding model, and the API uses the vectors for search, "similar books" and
 personal recommendations. Librarians manage the catalogue, users, loans and returns.
 
-| Semantic search, in Polish over English descriptions | Recommended for the reader |
+| Semantic search: describe the book, not its title | Recommended for the reader |
 | --- | --- |
 | ![Semantic search](docs/semantic-search.png) | ![Catalogue with recommendations](docs/catalogue.png) |
 | **Book page with similar books and reviews** | **Librarian dashboard** |
